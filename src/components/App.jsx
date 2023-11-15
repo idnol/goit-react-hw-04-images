@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, useEffect, useState } from 'react';
 import { getImages } from '../api';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -7,104 +7,81 @@ import { ErrorMessage } from 'formik';
 import { Blocks } from 'react-loader-spinner';
 import { AppElement, Inner } from './App.styled';
 
-export class App extends Component {
-  state = {
-    images: [],
-    query: '',
-    page: 1,
-    error: false,
-    loader: false,
-    pages: 0
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState(false);
+  const [loader, setLoader] = useState(false);
+  const [pages, setPages] = useState(0);
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.query !== this.state.query ||
-      prevState.page !== this.state.page
-    ) {
-      const query = this.state.query.split('--');
+  useEffect(() => {
+    async function fetchData() {
       try {
-        const images = await getImages(query[1], this.state.page);
-
-        this.setState(prevState => ({
-          images: [...prevState.images, ...images.hits],
-          pages: Math.ceil(images.totalHits / 12)
-        }));
+        const imagesArr = await getImages();
+        setImages(imagesArr.hits);
+        setLoader(true);
+        setPages(Math.ceil(imagesArr.totalHits / 12));
       } catch (e) {
         this.setState({
           error: true
         })
       } finally {
-        this.setState({
-          loader: false
-        })
+        setLoader(false);
       }
     }
-  }
+    fetchData();
+  }, []);
 
-  async componentDidMount(prevProps, prevState) {
-    try {
-      const images = await getImages();
-
-      this.setState({
-        images: images.hits,
-        loader: true,
-        pages: Math.ceil(images.totalHits / 12)
-      })
-    } catch (e) {
-      this.setState({
-        error: true
-      })
-    } finally {
-      this.setState({
-        loader: false
-      })
+  useEffect(() => {
+    async function fetchData() {
+      const search = query.split('--');
+      try {
+        const imagesArr = await getImages(search[1], page);
+        setImages(prevImages => [...prevImages, ...imagesArr.hits]);
+        setPages(Math.ceil(imagesArr.totalHits / 12));
+      } catch (e) {
+        setError(true);
+      } finally {
+        setLoader(false);
+      }
     }
-  }
+    fetchData();
+  }, [query, page])
 
-  handleSubmit = async query => {
-    this.setState({
-      query: `${Date.now()}--${query.query}`,
-      page: 1,
-      images: [],
-      loader: true
-    });
+  const handleSubmit = async query => {
+    setQuery(`${Date.now()}--${query.query}`);
+    setPages(1);
+    setImages([]);
+    setLoader(true);
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
-      };
-    });
-  };
+  const handleLoadMore = () => { setPage(page + 1) };
 
-  render() {
+  return (
+    <AppElement>
+      <Searchbar submit={handleSubmit} />
 
-    return (
-      <AppElement>
-        <Searchbar submit={this.handleSubmit} />
+      <div className='container'>
 
-        <div className='container'>
+        {error && <ErrorMessage />}
 
-          {this.state.error && <ErrorMessage />}
+        {loader && <Blocks
+          visible={true}
+          height="80"
+          width="80"
+          ariaLabel="blocks-loading"
+          wrapperStyle={{}}
+          wrapperClass="blocks-wrapper"
+        />}
 
-          {this.state.loader && <Blocks
-            visible={true}
-            height="80"
-            width="80"
-            ariaLabel="blocks-loading"
-            wrapperStyle={{}}
-            wrapperClass="blocks-wrapper"
-          />}
+        <ImageGallery gallery={images} />
 
-          <ImageGallery gallery={this.state.images} />
+        {page < pages && <Inner><LoadButton click={handleLoadMore} /></Inner>}
 
-          {this.state.page < this.state.pages && <Inner><LoadButton click={this.handleLoadMore} /></Inner>}
+      </div>
 
-        </div>
+    </AppElement>
+  );
 
-      </AppElement>
-    );
-  }
 }

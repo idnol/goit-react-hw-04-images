@@ -1,27 +1,18 @@
-import { Component } from 'react';
+import { useState } from 'react';
 import { ModalWIndow } from '../ModalWIndow/ModalWIndow';
 import { Image, Item } from './ImageGalleryItem.styled';
 
-export class ImageGalleryItem extends Component {
-  state = {
-    open: false
-  }
-  onOpen = () => {
-    this.setState({
-      open: true
-    })
-  }
+export const ImageGalleryItem = (props) => {
+  const [open, setOpen] = useState(false);
 
-  onClose = () => {
-    this.setState({
-      open: false
-    })
-  }
-  render() {
-    const {image: {previewURL, user, webformatURL}} = this.props;
-    return <Item>
-      <Image src={previewURL} alt={user} onClick={this.onOpen}/>
-      <ModalWIndow open={this.state.open} close={this.onClose} image={webformatURL} user={user} />
-    </Item>
-  }
+  const onOpen = () => { setOpen(true) };
+  const onClose = () => { setOpen(false) };
+
+  const {image: {previewURL, user, webformatURL}} = props;
+
+  return <Item>
+    <Image src={previewURL} alt={user} onClick={onOpen}/>
+    <ModalWIndow open={open} close={onClose} image={webformatURL} user={user} />
+  </Item>
+
 }
